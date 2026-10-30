@@ -69,6 +69,7 @@
         <div><b>ZOOM</b> mouse wheel or pinch &mdash; needs an Eyes upgrade</div>
         <div><b>CAMERA</b> locked at full view, follows you when zoomed in</div>
         <div><b>TOUCH</b> tap a tile to move &middot; pinch to zoom</div>
+        <div><b>AI LAB</b> press CTRL+ALT+M here on the menu</div>
       </div>
       <button id="intro-start">WAKE</button>
     </div>
@@ -80,6 +81,30 @@
       <div class="game-title red">THE FOREST TAKES YOU</div>
       <div id="go-stats" class="game-sub"></div>
       <button id="go-restart">TRY AGAIN</button>
+    </div>
+  </div>
+
+  <!-- AI Lab (Ctrl+Alt+M on the main menu) -->
+  <div id="aitest" hidden>
+    <div class="aitest-box">
+      <div class="aitest-title">AI LAB</div>
+      <div class="aitest-sub">the game's own from-scratch enemy AI - hand-written chase, pathfinding and pattern reading. no external AI.</div>
+      <div id="ai-status">&nbsp;</div>
+      <div class="aitest-row">
+        <label>ENEMY <select id="ai-type"></select></label>
+        <label>TIER <select id="ai-tier"></select></label>
+        <label>MAJOR <select id="ai-major"></select></label>
+        <label>PLAYER <select id="ai-pat"></select></label>
+      </div>
+      <canvas id="ai-canvas" width="238" height="238"></canvas>
+      <div class="aitest-row">
+        <button id="ai-step">STEP</button>
+        <button id="ai-run">RUN 20</button>
+        <button id="ai-bench">BENCH</button>
+        <button id="ai-reset">RESET</button>
+        <button id="ai-close">CLOSE</button>
+      </div>
+      <div id="ai-log"></div>
     </div>
   </div>
 

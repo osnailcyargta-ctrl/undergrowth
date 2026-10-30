@@ -26,6 +26,7 @@ export const S = {
   motes: [],            // { x, y, v } - exp orbs
   altar: null,          // { x, y, used, active }
   boss: null,
+  pmov: [],             // the player's last move offsets - the enemy AI reads this
 
   explored: new Uint8Array(GRID * GRID),
   visible: new Uint8Array(GRID * GRID),

@@ -2,6 +2,9 @@
 // 12 hardcoded body upgrades (3 per part: legs, arms, body, eyes) +
 // 10 unique upgrades (4 single, 4 capped, 2 infinite) +
 // infinite procedurally generated body upgrades (see genbody.js).
+// Every body upgrade carries a `sprite` key: the matching body part is
+// HIDDEN and replaced by a new part drawn in code (see spritegen.js), so
+// each evolution visibly reshapes the creature.
 
 import { S } from './state.js';
 import { recomputeVision } from './world.js';
@@ -10,22 +13,22 @@ import { candidates } from './genbody.js';
 import { shuffle } from './util.js';
 
 export const BODY = [
-  // legs
-  { id: 'legs1', part: 'legs', name: 'Long Stride',   desc: ['Straight reach 2'],                  tags: { reachStraight: 2 }, color: '#9fd08a', icon: 'legs-reach' },
-  { id: 'legs2', part: 'legs', name: 'Spider Legs',   desc: ['Knight jumps'],                      tags: { knight: 1 },        color: '#8a9a6b', icon: 'legs-knight' },
-  { id: 'legs3', part: 'legs', name: 'Deer Step',     desc: ['Diagonal reach 2', '+5% evade'],     tags: { reachDiag: 2, evade: 5 }, color: '#c9b98a', icon: 'legs-diag' },
+  // legs (sprite: the base leg art is replaced by code-drawn legs)
+  { id: 'legs1', part: 'legs', name: 'Long Stride',   desc: ['Straight reach 2', 'Grows long striding legs'],          tags: { reachStraight: 2 }, color: '#9fd08a', icon: 'legs-reach', sprite: 'stride' },
+  { id: 'legs2', part: 'legs', name: 'Spider Legs',   desc: ['Knight jumps', 'Base legs replaced by 8 spider limbs'],   tags: { knight: 1 },        color: '#8a9a6b', icon: 'legs-knight', sprite: 'spider' },
+  { id: 'legs3', part: 'legs', name: 'Deer Step',     desc: ['Diagonal reach 2', '+5% evade', 'Grows hooved legs'],    tags: { reachDiag: 2, evade: 5 }, color: '#c9b98a', icon: 'legs-diag', sprite: 'deer' },
   // arms
-  { id: 'arms1', part: 'arms', name: 'Sharp Claws',   desc: ['+2 ATK'],                            tags: { atk: 2 },           color: '#d9884a', icon: 'arms-claw' },
-  { id: 'arms2', part: 'arms', name: 'Thorn Fists',   desc: ['+1 ATK', 'Thorns 1'],                tags: { atk: 1, thorns: 1 }, color: '#8aa65a', icon: 'arms-thorn' },
-  { id: 'arms3', part: 'arms', name: 'Reaping Sweep', desc: ['1 dmg to 4 adjacent after moving'],  tags: { cleave: 1 },        color: '#c9c98a', icon: 'arms-sweep' },
+  { id: 'arms1', part: 'arms', name: 'Sharp Claws',   desc: ['+2 ATK', 'Arms become curved claws'],                     tags: { atk: 2 },           color: '#d9884a', icon: 'arms-claw', sprite: 'claw' },
+  { id: 'arms2', part: 'arms', name: 'Thorn Fists',   desc: ['+1 ATK', 'Thorns 1', 'Arms become thorned fists'],        tags: { atk: 1, thorns: 1 }, color: '#8aa65a', icon: 'arms-thorn', sprite: 'thornfist' },
+  { id: 'arms3', part: 'arms', name: 'Reaping Sweep', desc: ['1 dmg to 4 adjacent after moving', 'Arms become scythes'], tags: { cleave: 1 },      color: '#c9c98a', icon: 'arms-sweep', sprite: 'scythe' },
   // body
-  { id: 'body1', part: 'body', name: 'Oak Heart',     desc: ['+6 max HP'],                         tags: { maxHp: 6 },          color: '#7a9a5a', icon: 'body-heart' },
-  { id: 'body2', part: 'body', name: 'Fern Skin',     desc: ['+1 DEF'],                            tags: { def: 1 },            color: '#5a8a6a', icon: 'body-shield' },
-  { id: 'body3', part: 'body', name: 'Titan Chest',   desc: ['+10 max HP', '+1 DEF'],              tags: { maxHp: 10, def: 1 }, color: '#9a8a5a', icon: 'body-titan' },
+  { id: 'body1', part: 'body', name: 'Oak Heart',     desc: ['+6 max HP', 'Skin becomes oak bark'],                     tags: { maxHp: 6 },          color: '#7a9a5a', icon: 'body-heart', sprite: 'oak' },
+  { id: 'body2', part: 'body', name: 'Fern Skin',     desc: ['+1 DEF', 'Skin becomes living fern'],                     tags: { def: 1 },            color: '#5a8a6a', icon: 'body-shield', sprite: 'fern' },
+  { id: 'body3', part: 'body', name: 'Titan Chest',   desc: ['+10 max HP', '+1 DEF', 'Grows a stone torso'],            tags: { maxHp: 10, def: 1 }, color: '#9a8a5a', icon: 'body-titan', sprite: 'titan' },
   // eyes
-  { id: 'eyes1', part: 'eyes', name: 'Keen Eyes',     desc: ['+2 Sight', 'Unlocks zoom'],          tags: { vision: 2, zoom: 1 }, color: '#e8c96a', icon: 'eyes-eye' },
-  { id: 'eyes2', part: 'eyes', name: 'Hawk Sight',    desc: ['+2 Sight'],                          tags: { vision: 2 },         color: '#d9a84a', icon: 'eyes-eye' },
-  { id: 'eyes3', part: 'eyes', name: 'Owl Gaze',      desc: ['+3 Sight', 'Sense the altar'],       tags: { vision: 3, owl: 1 }, color: '#a8c9d9', icon: 'eyes-owl' },
+  { id: 'eyes1', part: 'eyes', name: 'Keen Eyes',     desc: ['+2 Sight', 'Unlocks zoom', 'Bright wide eyes'],           tags: { vision: 2, zoom: 1 }, color: '#e8c96a', icon: 'eyes-eye', sprite: 'keen' },
+  { id: 'eyes2', part: 'eyes', name: 'Hawk Sight',    desc: ['+2 Sight', 'Grows hawk eyes'],                            tags: { vision: 2 },         color: '#d9a84a', icon: 'eyes-eye', sprite: 'hawk' },
+  { id: 'eyes3', part: 'eyes', name: 'Owl Gaze',      desc: ['+3 Sight', 'Sense the altar', 'Huge round owl eyes'],     tags: { vision: 3, owl: 1 }, color: '#a8c9d9', icon: 'eyes-owl', sprite: 'owl' },
 ];
 
 export const UNIQUE = [
@@ -66,6 +69,7 @@ export function applyUpgrade(def) {
   const key = def.unique ? def.id : def.name;
   P.owned[key] = (P.owned[key] || 0) + 1;
   P.head = 1; // the cube awakens: a head grows on the first evolution
+  if (def.sprite && def.part) P.overrides[def.part] = def.sprite; // reshape that part
   const t = def.tags || {};
   if (def.part && def.part !== 'new') {
     P.parts[def.part]++;

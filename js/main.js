@@ -15,6 +15,7 @@ import { legalTargets } from './turn.js';
 import { spawnInitial } from './enemies.js';
 import { bossCells } from './boss.js';
 import { enemyCanvas, dragonCanvas, playerCanvas, crystalCanvas, moteCanvas } from './spritegen.js';
+import { initAITest } from './aitest.js';
 
 const PPT = 32; // pixels per tile inside the scene FBO
 
@@ -134,6 +135,7 @@ async function boot() {
     canZoom: false, owl: false, irisColor: null,
     head: 0, hasNewBody: false,
     parts: { legs: 0, arms: 0, body: 0, eyes: 0 },
+    overrides: {},       // per-part sprite replacements set by upgrades
     attachments: [], owned: {},
     anim: null, flash: 0,
   };
@@ -145,6 +147,7 @@ async function boot() {
   UI.initUI();
   UI.updateHUD();
   initInput(canvas);
+  initAITest();
 
   requestAnimationFrame(loop);
 }
@@ -308,7 +311,8 @@ function drawShadows(camX, camY, fw, fh) {
 const frameNow = (e) => (e.anim ? (Math.floor(S.time * 12) % 2) : (Math.floor(S.time * 2) % 2));
 
 function playerKey(P, frame) {
-  return `pl:${frame}:${P.parts.legs}${P.parts.arms}${P.parts.body}${P.parts.eyes}:${P.head}:${P.irisColor}:${P.attachments.map((a) => a.kind + a.color).join('|')}`;
+  const ov = P.overrides || {};
+  return `pl:${frame}:${P.parts.legs}${P.parts.arms}${P.parts.body}${P.parts.eyes}:${P.head}:${P.irisColor}:${P.attachments.map((a) => a.kind + a.color).join('|')}:${ov.legs || ''}.${ov.arms || ''}.${ov.body || ''}.${ov.eyes || ''}`;
 }
 
 function drawEntities(camX, camY, fw, fh) {
@@ -336,7 +340,7 @@ function drawEntities(camX, camY, fw, fh) {
   }
   for (const e of S.enemies) {
     const f = frameNow(e);
-    drawEnt(texFor(`en:${e.type}:${f}`, () => enemyCanvas(e.type, f)), e.px, e.py, 0.95, visAt(e.x, e.y), e.flash);
+    drawEnt(texFor(`en:${e.type}:${f}:${e.form || 'base'}:${e.tier || 0}:${e.major || 0}`, () => enemyCanvas(e.type, f, e)), e.px, e.py, 0.95, visAt(e.x, e.y), e.flash);
   }
   if (S.boss) {
     const b = S.boss;

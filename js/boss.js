@@ -1,6 +1,8 @@
 // UNDERGROWTH - the boss. The Ancient Dragon: 2x2 body, queen movement
 // pattern, up to 8 blocks per turn, breath attack at contact.
-// Only ever summoned on purpose, by stepping onto the altar tile.
+// It PHASES through trees, rocks and walls - only the edge of the world and
+// living bodies can stop it. Only ever summoned on purpose, by stepping onto
+// the altar tile.
 
 import { S, inGrid, cheb } from './state.js';
 import * as W from './world.js';
@@ -20,8 +22,7 @@ const bodyAt = (ox, oy) => [[ox, oy], [ox + 1, oy], [ox, oy + 1], [ox + 1, oy + 
 function cellsBlocked(ox, oy) {
   const P = S.player;
   for (const [cx, cy] of bodyAt(ox, oy)) {
-    if (!inGrid(cx, cy)) return true;
-    if (!W.walkable(cx, cy, false)) return true;
+    if (!inGrid(cx, cy)) return true;   // terrain means nothing to it; the void does
     if (P && P.x === cx && P.y === cy) return true;
     if (S.enemies.some((e) => e.x === cx && e.y === cy)) return true;
   }
@@ -48,7 +49,7 @@ export function spawnDragon() {
   S.boss = {
     ox: spot.ox, oy: spot.oy,
     px: spot.ox + 1, py: spot.oy + 1,
-    hp, maxHp: hp, atk: 7, flash: 0, anim: null,
+    hp, maxHp: hp, atk: 7 + Math.floor(S.level * 0.4), flash: 0, anim: null,
   };
   S.shake = Math.max(S.shake, 0.9);
   V.FX.bossSpawn(spot.ox + 1, spot.oy + 1);

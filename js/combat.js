@@ -2,6 +2,7 @@
 
 import { S, expNeedFor, cheb, inGrid } from './state.js';
 import { expandWorld, walkable } from './world.js';
+import { evolveEnemies } from './enemies.js';
 import * as V from './vfx.js';
 import * as UI from './ui.js';
 
@@ -26,6 +27,7 @@ function levelUpFx() {
   const P = S.player;
   P.hp = P.maxHp;               // full heal on evolve
   expandWorld();
+  evolveEnemies();              // the forest's answer: living enemies evolve too
   S.evoFlash = 1;
   V.FX.evo(P.px, P.py);
   UI.toast('Level up - choose your evolution');

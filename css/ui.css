@@ -178,6 +178,39 @@ button:hover { background: var(--ink); color: #0a0f0a; box-shadow: 0 0 24px rgba
   color: #d9705a; font-size: 13px; letter-spacing: 0.1em; padding: 30px; text-align: center;
 }
 
+/* ---------- AI Lab popup (Ctrl+Alt+M on the main menu) ---------- */
+#aitest {
+  position: absolute; inset: 0; z-index: 40;
+  background: rgba(4, 7, 4, 0.85);
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn 0.25s ease-out;
+}
+.aitest-box {
+  width: min(560px, 94vw); max-height: 94vh; overflow-y: auto;
+  background: rgba(14, 19, 13, 0.97);
+  border: 1px solid var(--line);
+  padding: 18px 20px 20px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+.aitest-title { font-size: 22px; letter-spacing: 0.42em; color: #7fe3d0; text-shadow: 0 0 16px rgba(127, 227, 208, 0.35); }
+.aitest-sub { font-size: 11px; color: var(--dim); letter-spacing: 0.06em; text-align: center; line-height: 1.6; max-width: 460px; }
+#ai-status { font-size: 11px; color: var(--amber); letter-spacing: 0.08em; min-height: 14px; }
+.aitest-row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center; }
+.aitest-row label { font-size: 10px; letter-spacing: 0.16em; color: var(--dim); display: flex; align-items: center; gap: 6px; }
+.aitest-row select {
+  font: inherit; font-size: 11px; color: var(--ink);
+  background: #0c110b; border: 1px solid var(--line); padding: 4px 6px;
+}
+.aitest-box button { padding: 6px 14px; font-size: 11px; letter-spacing: 0.18em; text-indent: 0.18em; }
+#ai-canvas { border: 1px solid var(--line); image-rendering: pixelated; background: #10160f; }
+#ai-log {
+  width: 100%; min-height: 118px; max-height: 150px; overflow-y: auto;
+  background: #0a0e09; border: 1px solid rgba(190, 210, 160, 0.15);
+  font-size: 10.5px; line-height: 1.7; color: var(--dim);
+  padding: 8px 10px; letter-spacing: 0.03em;
+}
+#ai-log div:last-child { color: var(--ink); }
+
 @media (max-width: 640px) {
   .bar { width: 150px; }
   .game-title { font-size: 30px; }

@@ -73,6 +73,8 @@ export async function playerAct(x, y) {
   try {
     const prevX = P.x, prevY = P.y;
     if (t.kind === 'wait') {
+      S.pmov.push({ x: 0, y: 0 }); // standing still is a pattern too
+      if (S.pmov.length > 16) S.pmov.shift();
       V.FX.wait(P.px, P.py);
       await sleep(130);
     } else if (t.kind === 'attack') {
@@ -134,6 +136,9 @@ async function doMove(t, prevX, prevY) {
     steps.push([P.x + sx, P.y + sy]);
   }
   steps.push([t.x, t.y]);
+  // the enemy AI reads this memory to learn movement patterns
+  S.pmov.push({ x: t.x - prevX, y: t.y - prevY });
+  if (S.pmov.length > 16) S.pmov.shift();
   for (const [sx, sy] of steps) {
     P.anim = { x0: P.px, y0: P.py, x1: sx, y1: sy, t0: now(), dur: 130 };
     await sleep(145);

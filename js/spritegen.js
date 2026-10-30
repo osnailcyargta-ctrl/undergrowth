@@ -27,6 +27,13 @@ function disc(x, cx, cy, r, col) {
     }
   }
 }
+// 1px line between two points (pixel-art friendly)
+function line(x, x0, y0, x1, y1, col) {
+  const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) || 1;
+  for (let i = 0; i <= n; i++) {
+    R(x, Math.round(x0 + ((x1 - x0) * i) / n), Math.round(y0 + ((y1 - y0) * i) / n), 1, 1, col);
+  }
+}
 function mulberry(seed) {
   let a = seed >>> 0;
   return function () {
@@ -162,8 +169,10 @@ export function crystalCanvas() {
 }
 
 // ---------------- enemies ----------------
-export function enemyCanvas(type, frame) {
+// `e` is optional: { type, form, major, tier } - the evolved forms.
+export function enemyCanvas(type, frame, e) {
   const c = cv(16, 16), x = ctx2(c);
+  const major = (e && e.major) || 0, tier = (e && e.tier) || 0, form = (e && e.form) || 'base';
   if (type === 'shambler') {
     R(x, 3, 4, 10, 8, '#242e20');
     R(x, 4, 5, 8, 6, '#44543c');
@@ -171,33 +180,81 @@ export function enemyCanvas(type, frame) {
     disc(x, 9, 8, 1.4, '#526b42');
     R(x, 4, 10, 8, 1, '#33412c');
     const ey = frame ? 8 : 7;
-    R(x, 6, ey, 1, 1, '#e8c96a'); R(x, 9, ey, 1, 1, '#e8c96a');
+    const eyeCol = major >= 1 ? '#e85a3a' : '#e8c96a';
+    R(x, 6, ey, 1, 1, eyeCol); R(x, 9, ey, 1, 1, eyeCol);
+    if (major >= 1) { // back spikes
+      R(x, 4, 3, 1, 1, '#33412c'); R(x, 7, 2, 1, 2, '#33412c'); R(x, 10, 3, 1, 1, '#33412c');
+    }
+    if (tier >= 2) { R(x, 5, 4, 1, 1, '#6d8a54'); R(x, 9, 5, 1, 1, '#6d8a54'); }
     R(x, 5, 12, 2, 1, '#242e20'); R(x, 9, 12, 2, 1, '#242e20');
   } else if (type === 'stalker') {
+    if (form === 'winged') {
+      // flapping wings behind the diamond; bigger and gold-rimmed at major 2+
+      const wc = major >= 2 ? '#c9d4e8' : '#8fa8c9';
+      const wd = major >= 2 ? '#8a9ab8' : '#5a6b88';
+      const up = frame === 0;
+      const wy = up ? 0 : 1;
+      // left wing
+      x.fillStyle = wd;
+      x.beginPath(); x.moveTo(5, 8); x.lineTo(0, 4 + wy); x.lineTo(4, 11); x.closePath(); x.fill();
+      x.fillStyle = wc;
+      x.beginPath(); x.moveTo(5, 8); x.lineTo(1, 5 + wy); x.lineTo(4, 10); x.closePath(); x.fill();
+      // right wing (mirrored)
+      x.save(); x.translate(16, 0); x.scale(-1, 1);
+      x.fillStyle = wd;
+      x.beginPath(); x.moveTo(5, 8); x.lineTo(0, 4 + wy); x.lineTo(4, 11); x.closePath(); x.fill();
+      x.fillStyle = wc;
+      x.beginPath(); x.moveTo(5, 8); x.lineTo(1, 5 + wy); x.lineTo(4, 10); x.closePath(); x.fill();
+      x.restore();
+      if (major >= 2) { R(x, 3, 6 + wy, 1, 1, '#e8d98a'); R(x, 12, 6 + wy, 1, 1, '#e8d98a'); }
+    }
     const off = frame ? -1 : 0;
     x.fillStyle = '#2a2433';
     x.beginPath();
     x.moveTo(8, 2 + off); x.lineTo(13, 8 + off); x.lineTo(8, 13 + off); x.lineTo(3, 8 + off);
     x.closePath(); x.fill();
-    x.fillStyle = '#5a4f66';
+    x.fillStyle = major >= 2 ? '#6e6280' : '#5a4f66';
     x.beginPath();
     x.moveTo(8, 3 + off); x.lineTo(12, 8 + off); x.lineTo(8, 12 + off); x.lineTo(4, 8 + off);
     x.closePath(); x.fill();
-    R(x, 6, 8 + off, 1, 1, '#e8e4f0'); R(x, 9, 8 + off, 1, 1, '#e8e4f0');
+    const eyeCol = major >= 1 ? '#ffd0e8' : '#e8e4f0';
+    R(x, 6, 8 + off, 1, 1, eyeCol); R(x, 9, 8 + off, 1, 1, eyeCol);
   } else if (type === 'skitter') {
-    disc(x, 8, 8.6, 5.4, '#2c2820');
-    disc(x, 8, 8.4, 4.8, '#5c5344');
-    R(x, 5, 6, 6, 1, '#463f33'); R(x, 4, 9, 8, 1, '#463f33'); R(x, 6, 11, 4, 1, '#463f33');
-    R(x, 7, 3, 2, 2, '#6b6152');
-    const l = frame ? 1 : 0;
-    R(x, 3, 5 + l, 1, 2, '#3a342a'); R(x, 12, 5 - l, 1, 2, '#3a342a');
-    R(x, 2, 9 - l, 1, 2, '#3a342a'); R(x, 13, 9 + l, 1, 2, '#3a342a');
+    if (form === 'rook') {
+      // hardened into a living rook tower
+      const bo = frame ? 1 : 0; // slow bob
+      const stone = '#5c5344', dark = '#3a362c', deep = '#2c2820';
+      R(x, 3, 2 + bo, 2, 3, stone); R(x, 7, 2 + bo, 2, 3, stone); R(x, 11, 2 + bo, 2, 3, stone); // merlons
+      R(x, 3, 5 + bo, 10, 1, dark);                                   // parapet
+      R(x, 4, 6 + bo, 8, 7, stone);                                   // tower body
+      R(x, 4, 8 + bo, 8, 1, dark); R(x, 8, 6 + bo, 1, 7, dark);       // stone seams
+      R(x, 4, 6 + bo, 8, 1, '#6d6454');                               // top light
+      R(x, 3, 13, 10, 2, deep);                                       // base skirt
+      const eyeCol = major >= 2 ? '#ffd76a' : '#e8c96a';
+      R(x, 6, 10 + bo, 1, 1, eyeCol); R(x, 9, 10 + bo, 1, 1, eyeCol);
+      if (major >= 2) { // knight form: metal side wings
+        R(x, 1, 7 + bo, 2, 1, '#8fa8c9'); R(x, 0, 8 + bo, 2, 1, '#5a6b88');
+        R(x, 13, 7 + bo, 2, 1, '#8fa8c9'); R(x, 14, 8 + bo, 2, 1, '#5a6b88');
+        R(x, 3, 2 + bo, 2, 1, '#e8d98a'); R(x, 11, 2 + bo, 2, 1, '#e8d98a');
+      }
+    } else {
+      disc(x, 8, 8.6, 5.4, '#2c2820');
+      disc(x, 8, 8.4, 4.8, '#5c5344');
+      R(x, 5, 6, 6, 1, '#463f33'); R(x, 4, 9, 8, 1, '#463f33'); R(x, 6, 11, 4, 1, '#463f33');
+      R(x, 7, 3, 2, 2, '#6b6152');
+      const l = frame ? 1 : 0;
+      R(x, 3, 5 + l, 1, 2, '#3a342a'); R(x, 12, 5 - l, 1, 2, '#3a342a');
+      R(x, 2, 9 - l, 1, 2, '#3a342a'); R(x, 13, 9 + l, 1, 2, '#3a342a');
+      if (tier >= 2) { R(x, 6, 7, 1, 1, '#7d745f'); R(x, 9, 8, 1, 1, '#7d745f'); }
+    }
   } else if (type === 'wisp') {
-    const r = frame ? 4.6 : 4.0;
+    const grow = major >= 1 ? 0.7 : 0;
+    const r = (frame ? 4.6 : 4.0) + grow;
     disc(x, 8, 8, r + 1.6, 'rgba(160,230,220,0.16)');
     disc(x, 8, 8, r, 'rgba(160,230,220,0.30)');
-    disc(x, 8, 8, 2.6, 'rgba(200,245,235,0.62)');
+    disc(x, 8, 8, 2.6 + grow * 0.5, 'rgba(200,245,235,0.62)');
     R(x, 7, 7, 2, 2, '#eafffa');
+    if (major >= 1) { R(x, 6, 7, 1, 1, '#8fe8d9'); R(x, 10, 7, 1, 1, '#8fe8d9'); }
   }
   return c;
 }
@@ -252,6 +309,143 @@ export function dragonCanvas(frame) {
 
 // ---------------- player compositor ----------------
 // draw order: back attachments -> legs -> body -> arms -> head -> front attachments
+
+// mirror helper: draw fn once, then mirrored around the sprite's center line
+function mirrored(x, fn) {
+  fn();
+  x.save();
+  x.translate(15, 0);
+  x.scale(-1, 1);
+  fn();
+  x.restore();
+}
+
+// Code-drawn body-part replacements. When an upgrade carries a `sprite` key
+// the base part art is HIDDEN and one of these takes its place, so every
+// evolution visibly reshapes the creature.
+export function partOverride(x, part, kind, frame) {
+  const f = frame ? 1 : 0;
+  if (part === 'legs') {
+    if (kind === 'stride') {
+      // two long legs with an exaggerated stride
+      const hip = 11;
+      mirrored(x, () => {
+        line(x, 6, hip, 4 - f, 13, '#5a6b44');
+        line(x, 4 - f, 13, 3 - f, 15, '#43522f');
+        R(x, 3 - f, 15, 2, 1, '#2f3a22');            // foot
+      });
+    } else if (kind === 'spider') {
+      // eight articulated limbs: hip - raised knee - tip, 4 per side
+      const dk = '#2f3a22', lt = '#4c5c34';
+      mirrored(x, () => {
+        line(x, 6, 9, 3, 6 - f, lt); line(x, 3, 6 - f, 1, 8 + f, dk);   // forward-up
+        line(x, 5, 11, 1, 10, lt); line(x, 1, 10, 0, 13 - f, dk);       // mid-out
+        line(x, 6, 12, 3, 13, lt); line(x, 3, 13, 1, 15, dk);           // back-down
+        line(x, 6, 10, 2, 8 + f, dk); line(x, 2, 8 + f, 0, 11, lt);     // upper-back
+        R(x, 3, 6 - f, 1, 1, '#6d7d4c');                                 // knee glint
+      });
+    } else if (kind === 'deer') {
+      mirrored(x, () => {
+        line(x, 5, 11, 4, 14, '#a8926a');
+        line(x, 6, 11, 6 + f, 15, '#8a765a');
+        R(x, 4, 14, 1, 2, '#2c2416');                 // hoof
+        R(x, 6 + f, 15, 1, 1, '#2c2416');
+      });
+    }
+  } else if (part === 'arms') {
+    if (kind === 'claw') {
+      mirrored(x, () => {
+        line(x, 3, 8, 1, 6, '#8a6a3a');               // arm
+        line(x, 1, 6, 0, 3, '#d9884a');               // claw curve
+        line(x, 2, 6, 1, 4, '#e8b06a');               // inner edge
+        R(x, 0, 3, 1, 1, '#f2d9a8');                  // tip
+      });
+    } else if (kind === 'thornfist') {
+      mirrored(x, () => {
+        R(x, 2, 8, 1, 2, '#5a6b3a');                  // wrist
+        R(x, 1, 9, 3, 3, '#6d8a4a');                  // fist
+        R(x, 0, 9, 1, 1, '#d9e8b0'); R(x, 3, 9, 1, 1, '#d9e8b0');
+        R(x, 1, 12, 1, 1, '#d9e8b0'); R(x, 3, 12, 1, 1, '#d9e8b0');
+      });
+    } else if (kind === 'scythe') {
+      mirrored(x, () => {
+        line(x, 4, 9, 2, 10, '#4a3a24');              // handle
+        line(x, 4, 6, 1, 4, '#c9c98a');               // blade curve
+        line(x, 1, 4, 0, 8, '#c9c98a');
+        line(x, 3, 6, 1, 5, '#e8e8b0');               // edge highlight
+        R(x, 0, 8, 1, 1, '#f2f2c9');                  // tip
+      });
+    }
+  } else if (part === 'body') {
+    if (kind === 'oak') {
+      R(x, 4, 4, 8, 9, '#6b5136');
+      R(x, 6, 4, 1, 9, '#553f28'); R(x, 9, 4, 1, 9, '#553f28');
+      R(x, 4, 4, 1, 9, '#553f28'); R(x, 11, 4, 1, 9, '#553f28');
+      R(x, 4, 4, 8, 1, '#5a7a4a');                    // moss rim
+      disc(x, 7, 9, 1, '#3d2c1a');                    // knot
+      R(x, 5, 5, 2, 1, '#7d6244');                    // grain light
+    } else if (kind === 'fern') {
+      R(x, 4, 4, 8, 9, '#3f6b42');
+      R(x, 7, 4, 1, 9, '#2e5231');                    // stem
+      line(x, 7, 6, 5, 5, '#6fa860'); line(x, 7, 6, 10, 5, '#6fa860');
+      line(x, 7, 9, 5, 8, '#6fa860'); line(x, 7, 9, 10, 8, '#6fa860');
+      line(x, 7, 12, 5, 11, '#6fa860'); line(x, 7, 12, 10, 11, '#6fa860');
+    } else if (kind === 'titan') {
+      R(x, 3, 3, 10, 10, '#6d736a');
+      R(x, 3, 3, 3, 2, '#828884'); R(x, 10, 3, 3, 2, '#828884');   // pauldrons
+      R(x, 3, 7, 10, 1, '#4a4f46');                   // seam
+      R(x, 3, 3, 10, 1, '#828884');
+      R(x, 7, 9, 2, 2, '#9ff0e0');                    // core gem
+      R(x, 4, 12, 1, 1, '#4a4f46'); R(x, 11, 12, 1, 1, '#4a4f46'); // rivets
+    }
+  } else if (part === 'eyes') {
+    if (kind === 'keen') {
+      R(x, 5, 6, 2, 2, '#ffd76a'); R(x, 9, 6, 2, 2, '#ffd76a');
+      R(x, 6, 7, 1, 1, '#1c2418'); R(x, 9, 7, 1, 1, '#1c2418');
+      R(x, 5, 6, 1, 1, '#fff8d8'); R(x, 10, 6, 1, 1, '#fff8d8');
+    } else if (kind === 'hawk') {
+      R(x, 5, 7, 2, 1, '#e8a04a'); R(x, 9, 7, 2, 1, '#e8a04a');
+      R(x, 4, 6, 1, 1, '#7a5a2a'); R(x, 6, 6, 1, 1, '#7a5a2a');
+      R(x, 9, 6, 1, 1, '#7a5a2a'); R(x, 11, 6, 1, 1, '#7a5a2a');
+      R(x, 6, 7, 1, 1, '#1c2418'); R(x, 9, 7, 1, 1, '#1c2418');
+    } else if (kind === 'owl') {
+      disc(x, 6, 7, 1.7, '#f2ead0'); disc(x, 9, 7, 1.7, '#f2ead0');
+      disc(x, 6, 7, 0.9, '#e8c96a'); disc(x, 9, 7, 0.9, '#e8c96a');
+      R(x, 6, 7, 1, 1, '#1c2418'); R(x, 9, 7, 1, 1, '#1c2418');
+      R(x, 5, 4, 1, 1, '#8a7a5a'); R(x, 10, 4, 1, 1, '#8a7a5a');   // brow feathers
+    }
+  }
+}
+
+export function playerCanvas(P, imgs, frame) {
+  const c = cv(16, 16), x = ctx2(c);
+  const back = ['wings', 'tail', 'cloak'];
+  for (const att of P.attachments) if (back.includes(att.kind)) drawAtt(x, att, frame);
+  const ov = P.overrides || {};
+  const bob = frame === 1 ? -1 : 0;
+  if (P.parts.legs > 0) {
+    if (ov.legs) partOverride(x, 'legs', ov.legs, frame);
+    else x.drawImage(imgs.legs, 0, 0);
+  }
+  if (ov.body) partOverride(x, 'body', ov.body, frame);
+  else x.drawImage(imgs.body, 0, 0);
+  if (P.parts.arms > 0) {
+    if (ov.arms) partOverride(x, 'arms', ov.arms, frame);
+    else x.drawImage(imgs.arms, 0, bob);
+  }
+  if (P.head) x.drawImage(imgs.head, 0, bob);
+  for (const att of P.attachments) if (!back.includes(att.kind)) drawAtt(x, att, frame);
+  if (P.parts.eyes > 0) {
+    if (ov.eyes) partOverride(x, 'eyes', ov.eyes, frame);
+    else {
+      const iris = P.irisColor || '#ffd76a';
+      R(x, 5, 7, 1, 1, '#1c2418'); R(x, 6, 7, 1, 1, iris);
+      R(x, 10, 7, 1, 1, '#1c2418'); R(x, 9, 7, 1, 1, iris);
+    }
+  }
+  return c;
+}
+
 function drawWing(x, att, frame) {
   const col = att.color || '#8fa8c9';
   const dark = shade(col, -0.35);
@@ -311,24 +505,6 @@ function drawAtt(x, att, frame) {
       x.globalAlpha = 1;
       break;
   }
-}
-
-export function playerCanvas(P, imgs, frame) {
-  const c = cv(16, 16), x = ctx2(c);
-  const back = ['wings', 'tail', 'cloak'];
-  for (const att of P.attachments) if (back.includes(att.kind)) drawAtt(x, att, frame);
-  const bob = frame === 1 ? -1 : 0;
-  if (P.parts.legs > 0) x.drawImage(imgs.legs, 0, 0);
-  x.drawImage(imgs.body, 0, 0);
-  if (P.parts.arms > 0) x.drawImage(imgs.arms, 0, bob);
-  if (P.head) x.drawImage(imgs.head, 0, bob);
-  for (const att of P.attachments) if (!back.includes(att.kind)) drawAtt(x, att, frame);
-  if (P.parts.eyes > 0) {
-    const iris = P.irisColor || '#ffd76a';
-    R(x, 5, 7, 1, 1, '#1c2418'); R(x, 6, 7, 1, 1, iris);
-    R(x, 10, 7, 1, 1, '#1c2418'); R(x, 9, 7, 1, 1, iris);
-  }
-  return c;
 }
 
 // ---------------- upgrade icons (16x16, upscaled by CSS) ----------------
