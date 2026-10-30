@@ -3,7 +3,7 @@
 import { S, cheb } from './state.js';
 import { buildChoices, applyUpgrade } from './upgrades.js';
 import { iconCanvas } from './spritegen.js';
-import { CAM, worldToScreen, isFollowing } from './camera.js';
+import { CAM, worldToScreen, isFollowing, zoomMax } from './camera.js';
 
 const el = {};
 let booted = false;
@@ -55,7 +55,7 @@ export function updateHUD() {
   el.sight.textContent = `SIGHT ${S.vision}`;
   el.turn.textContent = `TURN ${S.turn}`;
   el.atk.textContent = `ATK ${P.atk % 1 ? P.atk.toFixed(1) : P.atk}`;
-  el.zoominfo.textContent = `ZOOM ${CAM.z % 1 ? CAM.z.toFixed(1) : CAM.z} / ${S.vision}`;
+  el.zoominfo.textContent = `ZOOM ${CAM.z % 1 ? CAM.z.toFixed(1) : CAM.z} / ${zoomMax()}`;
 }
 
 export function showGameOver() {

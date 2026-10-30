@@ -24,10 +24,10 @@ as-is (no build step).
 
 | Action | Input |
 | --- | --- |
-| Move | Click a highlighted tile beside you (8 directions) |
-| Wait | Click your own tile |
-| Zoom | Mouse wheel or `+` / `-` (needs an Eyes upgrade, min 2 tiles) |
-| Pan camera | `WASD` / arrow keys (free camera only) |
+| Move | Click or tap a highlighted tile beside you (8 directions) |
+| Wait | Click / tap your own tile |
+| Zoom | Mouse wheel, pinch, or `+` / `-` (needs an Eyes upgrade, min 2 tiles) |
+| Camera | Locked at full view; follows you automatically while zoomed in |
 | Restart | `R` on the game over screen |
 
 ## How it plays
@@ -86,15 +86,16 @@ undergrowth/
 
 ## Design assumptions
 
-- **Zoom**: range is [2, current sight]. Default zoom equals your sight
-  range, so zooming out further is impossible by design — better eyes are
-  the only way to see further. Any zoom below sight range makes the camera
-  follow the player; at default zoom the camera is free and clamped to the
-  original camera range (spawn +/- 4 tiles), and it never follows you
-  automatically.
-- **Vision** is a plain Chebyshev square — trees do not block sight.
-- **Camera bounds**: free camera can only pan within the original 4-tile
-  range around spawn. An edge arrow shows where you are when off-screen.
+- **Zoom**: range is [2, min(sight, 30)]. The camera is locked while you are
+  at full view and follows you whenever the view is tighter than your sight.
+  Taking a Sight upgrade while already at full view auto-expands the view.
+  Zooming out is capped at 30 tiles even if your sight grows past that — and
+  since the camera follows whenever zoom is below sight, a sight of 31+ keeps
+  the camera following even at the 30 cap.
+- **Touch**: tap to move or wait, pinch to zoom. There is no manual camera
+  panning anywhere in the game.
+- **Vision** is a plain Chebyshev square — trees do not block sight. An edge
+  arrow shows where you are when off-screen.
 - **Evolution popup**: 3 cards per level, at least one body upgrade and one
   unique upgrade when available; unique card header reads "unique upgrade".
 - **Procedural upgrades**: 2 fresh rule-based candidates per level-up, part

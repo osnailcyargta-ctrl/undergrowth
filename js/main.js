@@ -9,7 +9,7 @@ import * as SG from './spritegen.js';
 import * as W from './world.js';
 import * as V from './vfx.js';
 import * as UI from './ui.js';
-import { CAM, update as camUpdate } from './camera.js';
+import { CAM, update as camUpdate, screenToWorldTile } from './camera.js';
 import { initInput, mouse } from './input.js';
 import { legalTargets } from './turn.js';
 import { spawnInitial } from './enemies.js';
@@ -270,16 +270,14 @@ function drawHighlights(camX, camY, fw, fh) {
   setScene(flatP, camX, camY, fw, fh);
   gl.bindVertexArray(quadVao);
   const legal = legalTargets();
-  const ppT = CAM.H / (2 * CAM.z);
-  const hx = Math.round((mouse.x - CAM.W / 2) / ppT + CAM.x);
-  const hy = Math.round((mouse.y - CAM.H / 2) / ppT + CAM.y);
+  const hover = screenToWorldTile(mouse.x, mouse.y);
   gl.uniform2f(flatP.u('uSize'), 0.92, 0.92);
   for (const [, v] of legal) {
     let col;
     if (v.kind === 'move') col = [1, 0.95, 0.7, 0.09];
     else if (v.kind === 'attack') col = [1, 0.4, 0.25, 0.14];
     else col = [0.7, 0.85, 0.7, 0.07];
-    if (hx === v.x && hy === v.y) col = [col[0], col[1], col[2], v.kind === 'attack' ? 0.4 : 0.26];
+    if (hover.x === v.x && hover.y === v.y) col = [col[0], col[1], col[2], v.kind === 'attack' ? 0.4 : 0.26];
     gl.uniform4f(flatP.u('uColor'), col[0], col[1], col[2], col[3]);
     gl.uniform2f(flatP.u('uPos'), v.x, v.y);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
