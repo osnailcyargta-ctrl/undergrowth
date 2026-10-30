@@ -103,6 +103,38 @@ export function makeTiles() {
     for (let i = 0; i < 10; i++) R(x, (rnd() * 16) | 0, (rnd() * 16) | 0, 1, 1, '#16240f');
     return c;
   };
+  // jungle ground: brighter, warmer green with fern shoots
+  const jgrass = (seed) => {
+    const c = cv(16, 16), x = ctx2(c), rnd = mulberry(seed);
+    R(x, 0, 0, 16, 16, '#3a6632');
+    for (let i = 0; i < 34; i++) R(x, (rnd() * 16) | 0, (rnd() * 16) | 0, 1, 1, rnd() < 0.5 ? '#325c2b' : '#437238');
+    for (let i = 0; i < 5; i++) {                    // little fern shoots
+      const fx = (rnd() * 14) | 0, fy = (rnd() * 14) | 0;
+      R(x, fx, fy, 1, 2, '#4e8240'); R(x, fx - 1, fy + 1, 1, 1, '#4e8240'); R(x, fx + 1, fy + 1, 1, 1, '#4e8240');
+    }
+    for (let i = 0; i < 4; i++) R(x, (rnd() * 16) | 0, (rnd() * 16) | 0, 1, 1, '#568e44');
+    return c;
+  };
+  // tall jungle tree trunk: gnarled branches (the leaf canopy is a separate
+  // live sprite one tile above - see leafCanvas)
+  const jtree = (seed) => {
+    const c = cv(16, 16), x = ctx2(c), rnd = mulberry(seed);
+    R(x, 0, 0, 16, 16, '#3a6632');
+    for (let i = 0; i < 16; i++) R(x, (rnd() * 16) | 0, (rnd() * 16) | 0, 1, 1, '#325c2b');
+    // trunk
+    R(x, 6, 2, 4, 14, '#4a3626');
+    R(x, 7, 2, 2, 14, '#5d452f');
+    R(x, 7, 4, 1, 4, '#6d5238');
+    // branches reaching out
+    R(x, 3, 4, 4, 1, '#4a3626'); R(x, 2, 3, 2, 1, '#4a3626');
+    R(x, 9, 6, 5, 1, '#4a3626'); R(x, 13, 5, 1, 2, '#4a3626');
+    R(x, 4, 9, 3, 1, '#4a3626'); R(x, 9, 11, 4, 1, '#4a3626');
+    // moss patches
+    R(x, 6, 10, 1, 2, '#4e8240'); R(x, 9, 3, 1, 2, '#4e8240'); R(x, 8, 13, 2, 1, '#437238');
+    // roots
+    R(x, 4, 14, 3, 1, '#4a3626'); R(x, 9, 14, 3, 1, '#4a3626');
+    return c;
+  };
   const altar = () => {
     const c = cv(16, 16), x = ctx2(c);
     R(x, 0, 0, 16, 16, '#565b52');
@@ -120,7 +152,128 @@ export function makeTiles() {
     R(x, 2, 8, 1, 1, '#7fe3d0'); R(x, 13, 8, 1, 1, '#7fe3d0');
     return c;
   };
-  return [grass(11, false), grass(22, false), grass(33, true), tree(44), tree(55), rock(), wall(66), wall(77), altar()];
+  return [grass(11, false), grass(22, false), grass(33, true), tree(44), tree(55), rock(), wall(66), wall(77), altar(),
+          jgrass(88), jgrass(99), jtree(111)];
+}
+
+// ---------------- structures & overlays (live entity sprites) ----------------
+
+// canopy of a tall jungle tree, drawn one tile ABOVE the trunk. Fully opaque
+// until the player steps under it, then it fades so you can see yourself.
+export function leafCanvas(seed) {
+  const c = cv(20, 20), x = ctx2(c), rnd = mulberry(seed);
+  const cx = 10, cy = 10;
+  disc(x, cx, cy + 0.6, 8.6, 'rgba(20,40,22,0.85)');       // deep shadow rim
+  disc(x, cx, cy, 8.0, '#2c5630');
+  disc(x, cx - 0.6, cy - 0.6, 6.6, '#356536');
+  for (let i = 0; i < 9; i++) {                             // leaf clusters
+    const a = rnd() * Math.PI * 2, d = rnd() * 5.2;
+    disc(x, cx - 0.4 + Math.cos(a) * d, cy - 0.4 + Math.sin(a) * d, 1.9, rnd() < 0.5 ? '#3f7440' : '#3a6c3c');
+  }
+  for (let i = 0; i < 7; i++) R(x, cx - 6 + ((rnd() * 12) | 0), cy - 6 + ((rnd() * 12) | 0), 1, 1, '#4e8a4a');
+  disc(x, cx - 2.4, cy - 2.6, 2.0, '#4e8a4a');              // moonlit highlight
+  disc(x, cx - 2.8, cy - 3.0, 1.0, '#5d9a54');
+  return c;
+}
+
+// explorer camp: canvas tent (solid structure)
+export function tentCanvas() {
+  const c = cv(20, 20), x = ctx2(c);
+  // guy ropes
+  line(x, 2, 15, 9, 4, '#8a8264'); line(x, 17, 15, 11, 4, '#8a8264');
+  R(x, 1, 15, 3, 1, '#5d5646'); R(x, 16, 15, 3, 1, '#5d5646');
+  // tent body
+  x.fillStyle = '#4a5a3c';
+  x.beginPath(); x.moveTo(10, 2); x.lineTo(19, 16); x.lineTo(1, 16); x.closePath(); x.fill();
+  x.fillStyle = '#5d7049';
+  x.beginPath(); x.moveTo(10, 3); x.lineTo(17, 15); x.lineTo(3, 15); x.closePath(); x.fill();
+  // lit face + shadow face
+  x.fillStyle = '#6d8254';
+  x.beginPath(); x.moveTo(10, 3); x.lineTo(17, 15); x.lineTo(10, 15); x.closePath(); x.fill();
+  // entrance flap
+  x.fillStyle = '#2c3524';
+  x.beginPath(); x.moveTo(10, 6); x.lineTo(13, 15); x.lineTo(7, 15); x.closePath(); x.fill();
+  R(x, 10, 8, 1, 7, '#232b1c');
+  // ridge pole + pin
+  R(x, 9, 1, 1, 2, '#5d5646');
+  R(x, 10, 17, 1, 2, '#6d6448');
+  return c;
+}
+
+// loot chest, closed (intact) and open (emptied into EXP)
+export function chestCanvas(open) {
+  const c = cv(16, 16), x = ctx2(c);
+  if (open) {
+    // lid thrown open, chest empty with a faint glow inside
+    x.fillStyle = '#6d4a2c';
+    x.fillRect(2, 2, 12, 4);                       // raised lid
+    x.fillStyle = '#8a5f3a';
+    x.fillRect(2, 2, 12, 2);
+    R(x, 2, 5, 12, 1, '#54381f');
+    x.fillStyle = '#3d2a17';
+    x.fillRect(2, 7, 12, 6);                       // open box
+    disc(x, 8, 10, 2.6, 'rgba(232,184,74,0.30)');  // leftover glow
+    disc(x, 8, 10, 1.4, 'rgba(232,184,74,0.45)');
+    R(x, 2, 12, 12, 1, '#2c1f10');
+  } else {
+    x.fillStyle = '#3d2a17';
+    x.fillRect(2, 6, 12, 7);                       // box
+    x.fillStyle = '#6d4a2c';
+    x.fillRect(3, 7, 10, 5);
+    x.fillStyle = '#8a5f3a';
+    x.fillRect(2, 3, 12, 4);                       // lid
+    x.fillRect(2, 5, 12, 1,);
+    x.fillStyle = '#a3763f';
+    x.fillRect(2, 3, 12, 1);
+    R(x, 3, 6, 10, 1, '#54381f');                  // lid seam
+    // gold bands
+    R(x, 4, 3, 1, 10, '#c9a44a'); R(x, 11, 3, 1, 10, '#c9a44a');
+    // lock
+    R(x, 7, 6, 2, 3, '#e0bc5e'); R(x, 8, 7, 1, 1, '#6d4a2c');
+  }
+  return c;
+}
+
+// 5 bone pieces the dragon shatters into (padded for rotation)
+export function boneCanvas(i) {
+  const c = cv(16, 16), x = ctx2(c);
+  const bone = '#e8e0cc', shade = '#b8ad94', dark = '#8a8070';
+  if (i === 0) {
+    // skull fragment: jaw + horn stub
+    x.fillStyle = bone;
+    x.beginPath(); x.ellipse(8, 9, 4.4, 3.4, 0.3, 0, Math.PI * 2); x.fill();
+    x.fillStyle = shade;
+    x.beginPath(); x.ellipse(9, 10, 3.0, 2.2, 0.3, 0, Math.PI * 2); x.fill();
+    R(x, 5, 4, 2, 3, bone); R(x, 10, 3, 2, 3, bone);   // horn stubs
+    R(x, 5, 4, 2, 1, shade); R(x, 10, 3, 2, 1, shade);
+    R(x, 6, 8, 1, 2, dark); R(x, 9, 8, 1, 2, dark);    // empty sockets
+  } else if (i === 1) {
+    // rib
+    x.strokeStyle = bone; x.lineWidth = 2;
+    x.beginPath(); x.arc(8, 8, 5, Math.PI * 0.15, Math.PI * 1.05); x.stroke();
+    x.strokeStyle = shade; x.lineWidth = 1;
+    x.beginPath(); x.arc(8, 8, 5, Math.PI * 0.3, Math.PI * 0.9); x.stroke();
+    R(x, 2, 8, 2, 2, bone);
+  } else if (i === 2) {
+    // spine vertebra
+    disc(x, 8, 8, 3.4, bone);
+    disc(x, 8, 8, 1.8, shade);
+    disc(x, 8, 8, 0.9, dark);
+    R(x, 4, 4, 2, 2, bone); R(x, 10, 10, 2, 2, bone);
+  } else if (i === 3) {
+    // wing bone: long with two joints
+    line(x, 3, 12, 12, 4, bone);
+    line(x, 3, 11, 11, 4, shade);
+    disc(x, 3, 12, 1.8, bone); disc(x, 8, 8, 1.6, bone); disc(x, 12, 4, 1.8, bone);
+    disc(x, 12, 4, 0.8, shade);
+  } else {
+    // claw
+    x.fillStyle = bone;
+    x.beginPath(); x.moveTo(3, 12); x.quadraticCurveTo(6, 3, 12, 4); x.quadraticCurveTo(8, 6, 7, 12); x.closePath(); x.fill();
+    x.fillStyle = shade;
+    x.beginPath(); x.moveTo(5, 11); x.quadraticCurveTo(7, 6, 11, 5); x.quadraticCurveTo(8, 7, 7, 11); x.closePath(); x.fill();
+  }
+  return c;
 }
 
 // ---------------- shared small canvases ----------------
@@ -257,6 +410,42 @@ export function enemyCanvas(type, frame, e) {
     disc(x, 8, 8, 2.6 + grow * 0.5, 'rgba(200,245,235,0.62)');
     R(x, 7, 7, 2, 2, '#eafffa');
     if (major >= 1) { R(x, 6, 7, 1, 1, '#8fe8d9'); R(x, 10, 7, 1, 1, '#8fe8d9'); }
+  } else if (type === 'bat') {
+    // jungle bat: broad leaf-green wings, tiny round body, big glow eyes.
+    // Its reach is the odd one: orthogonal 1, diagonal 2 - the sprite leans
+    // into that with long clipped wing tips.
+    const up = frame === 0;
+    const wm = major >= 2 ? '#7aa85a' : '#5a8a4a';   // wing membrane
+    const wb = major >= 1 ? '#3d5a34' : '#2f4a2c';   // wing bone / edge
+    const dy = up ? -1 : 1;
+    const wing = (flip) => {
+      x.save();
+      if (flip) { x.translate(16, 0); x.scale(-1, 1); }
+      x.fillStyle = wb;
+      x.beginPath();
+      x.moveTo(7, 8);
+      x.lineTo(1, 4 + dy); x.lineTo(2, 7); x.lineTo(0, 9);
+      x.lineTo(3, 11); x.lineTo(5, 12 + dy * 0.5);
+      x.closePath(); x.fill();
+      x.fillStyle = wm;
+      x.beginPath();
+      x.moveTo(7, 8);
+      x.lineTo(2, 5 + dy); x.lineTo(3, 8); x.lineTo(4, 10.5);
+      x.closePath(); x.fill();
+      R(x, 2, 7 + dy, 1, 1, wb);
+      x.restore();
+    };
+    wing(false); wing(true);
+    // body + ears
+    disc(x, 8, 8.6, 3.0, wb);
+    disc(x, 8, 8.4, 2.4, major >= 1 ? '#6a9a5a' : '#58804c');
+    R(x, 6, 4 + (up ? -1 : 0), 1, 2, wb); R(x, 9, 4 + (up ? -1 : 0), 1, 2, wb);
+    R(x, 6, 4 + (up ? -1 : 0), 1, 1, wm); R(x, 9, 4 + (up ? -1 : 0), 1, 1, wm);
+    // eyes
+    const eyeCol = major >= 1 ? '#ffd76a' : '#d9e86a';
+    R(x, 7, 7, 1, 1, eyeCol); R(x, 9, 7, 1, 1, eyeCol);
+    // fangs on higher tiers
+    if (tier >= 2) { R(x, 7, 10, 1, 1, '#e8e0cc'); R(x, 9, 10, 1, 1, '#e8e0cc'); }
   }
   return c;
 }

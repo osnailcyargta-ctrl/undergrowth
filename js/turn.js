@@ -6,7 +6,7 @@ import { S, inGrid, cheb } from './state.js';
 import * as W from './world.js';
 import * as V from './vfx.js';
 import * as UI from './ui.js';
-import { enemyAt, awardExp, killEnemy } from './combat.js';
+import { enemyAt, awardExp, killEnemy, dropMotes } from './combat.js';
 import { enemyTurnsAll, spawnTick } from './enemies.js';
 import { bossCells, damageDragon } from './boss.js';
 import { sleep, now } from './util.js';
@@ -103,6 +103,11 @@ export async function playerAct(x, y) {
         P.hp++;
         V.FX.pick(P.px, P.py);
       }
+      // blessed altar ground: standing on it mends 1 HP per turn
+      if (!S.over && W.blessedAt(P.x, P.y) && P.hp < P.maxHp) {
+        P.hp++;
+        V.FX.bless(P.px, P.py);
+      }
       UI.updateHUD();
     }
   } finally {
@@ -126,6 +131,21 @@ async function doMove(t, prevX, prevY) {
     S.shake = Math.max(S.shake, 0.4);
     UI.toast('The altar flares. Something has noticed.');
     V.FX.ember(A.x, A.y);
+    return;
+  }
+  // camps work the same way: step onto the chest and it bursts into EXP
+  const chest = W.chestAt(t.x, t.y);
+  if (chest && !chest.looted) {
+    P.anim = { x0: P.px, y0: P.py, x1: chest.cx, y1: chest.cy, t0: now(), dur: 130 };
+    await sleep(150);
+    P.anim = { x0: P.px, y0: P.py, x1: prevX, y1: prevY, t0: now(), dur: 180 };
+    await sleep(200);
+    P.x = prevX; P.y = prevY;
+    chest.looted = true;
+    V.FX.loot(chest.cx, chest.cy);
+    awardExp(8 + 2 * S.level);
+    dropMotes(chest.cx, chest.cy, 3);
+    UI.toast('The chest bursts into experience.');
     return;
   }
   // simple move: one tile, or a straight/diagonal/knight path

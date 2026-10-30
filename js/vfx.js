@@ -135,11 +135,56 @@ export const FX = {
       spawn({ x: x + (Math.random() - 0.5) * 2, y: y - 1, vx: 0, vy: 1.6 + Math.random(), life: 1.1, size: 0.14, col: [1, 0.55, 0.15], a: 1 });
     }
   },
+  // fast expanding shockwave ring (second beat of the boss death)
+  bossDeathRing(x, y) {
+    for (let i = 0; i < 30; i++) {
+      const a = (i / 30) * Math.PI * 2;
+      spawn({
+        x: x + Math.cos(a) * 0.4, y: y + Math.sin(a) * 0.4,
+        vx: Math.cos(a) * 3.4, vy: Math.sin(a) * 3.4,
+        life: 0.5 + Math.random() * 0.2, size: 0.15, drag: 3.2,
+        col: [1, 0.75, 0.3], a: 0.9,
+      });
+    }
+  },
   bossDeath(x, y) {
     burst(x, y, 50, [1, 0.65, 0.2], 4.5, 1.0, 0.18);
     burst(x, y, 30, [0.8, 0.2, 0.1], 3.0, 1.4, 0.2);
     for (let i = 0; i < 20; i++) {
       spawn({ x: x + (Math.random() - 0.5) * 2.4, y: y + (Math.random() - 0.5) * 2, vx: 0, vy: 1.2 + Math.random() * 1.6, life: 1.5, size: 0.15, col: [1, 0.85, 0.45], a: 1 });
+    }
+    // rising embers + a dust skirt hugging the ground
+    for (let i = 0; i < 16; i++) {
+      const a = Math.random() * Math.PI * 2;
+      spawn({
+        x: x + Math.cos(a) * 0.9, y: y + Math.sin(a) * 0.9,
+        vx: Math.cos(a) * 0.4, vy: Math.sin(a) * 0.4,
+        life: 1.6 + Math.random(), size: 0.2,
+        col: [0.55, 0.5, 0.42], a: 0.5, grav: -0.25,
+      });
+    }
+  },
+  // the camp chest bursts into experience
+  loot(x, y) {
+    burst(x, y, 22, [1, 0.82, 0.35], 2.6, 0.9, 0.15);
+    for (let i = 0; i < 12; i++) {
+      spawn({
+        x: x + (Math.random() - 0.5) * 0.5, y: y,
+        vx: (Math.random() - 0.5) * 1.4, vy: 1.4 + Math.random() * 1.6,
+        life: 0.9 + Math.random() * 0.5, size: 0.12,
+        col: [1, 0.9, 0.5], a: 1, grav: 2.2,
+      });
+    }
+  },
+  // blessed ground: a soft teal wisp when the altar mends you
+  bless(x, y) {
+    for (let i = 0; i < 7; i++) {
+      spawn({
+        x: x + (Math.random() - 0.5) * 0.8, y: y + (Math.random() - 0.5) * 0.5,
+        vx: (Math.random() - 0.5) * 0.3, vy: 0.5 + Math.random() * 0.6,
+        life: 0.7 + Math.random() * 0.4, size: 0.11,
+        col: [0.5, 0.95, 0.85], a: 0.85,
+      });
     }
   },
 };

@@ -24,7 +24,8 @@ export const S = {
   player: null,
   enemies: [],
   motes: [],            // { x, y, v } - exp orbs
-  altar: null,          // { x, y, used, active }
+  camps: [],            // { x, y, cx, cy, looted } - tent + chest structures
+  altar: null,          // { x, y, used, active, blessed: [{x,y}] }
   boss: null,
   pmov: [],             // the player's last move offsets - the enemy AI reads this
 

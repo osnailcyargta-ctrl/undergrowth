@@ -4,7 +4,9 @@
 //
 // Chess-style movement patterns:
 //   shambler = king (1 tile, 8 dirs), stalker = bishop (diagonals),
-//   skitter = rook (orthogonals), wisp = drifts anywhere, over trees.
+//   skitter = rook (orthogonals), wisp = drifts anywhere, over trees,
+//   jungle bat = a shape of its own: 1 step orthogonal (the 3x3 around it)
+//   but 2-step diagonals (the corners of its 5x5) - it also flies over trees.
 //
 // Evolution, driven by the player's level:
 //   every 3 level ups  -> evolution tier: +HP / +ATK and a smarter brain
@@ -15,6 +17,9 @@
 //                         stalker grows wings and gains knight jumps,
 //                         skitter hardens into a rook tower (and gains knight
 //                         jumps at the second major), everyone gets stronger.
+//
+// While the Ancient Dragon lives, every other enemy is FROZEN - the forest
+// holds its breath until the boss falls.
 
 import { S, idx, inGrid, cheb } from './state.js';
 import * as W from './world.js';
@@ -25,10 +30,11 @@ import { bossCells, dragonTurn } from './boss.js';
 import { sleep, now, shuffle } from './util.js';
 
 export const TYPES = {
-  shambler: { name: 'Shambler', hp: 6,  atk: 2, exp: 2, pattern: 'king',   every: 1, aggro: 6 },
-  stalker:  { name: 'Stalker',  hp: 5,  atk: 3, exp: 3, pattern: 'bishop', every: 1, aggro: 7 },
-  skitter:  { name: 'Skitter',  hp: 9,  atk: 2, exp: 3, pattern: 'rook',   every: 2, aggro: 6 },
-  wisp:     { name: 'Wisp',     hp: 4,  atk: 1, exp: 2, pattern: 'drift',  every: 1, aggro: 0 },
+  shambler: { name: 'Shambler',    hp: 6, atk: 2, exp: 2, pattern: 'king',   every: 1, aggro: 6 },
+  stalker:  { name: 'Stalker',     hp: 5, atk: 3, exp: 3, pattern: 'bishop', every: 1, aggro: 7 },
+  skitter:  { name: 'Skitter',     hp: 9, atk: 2, exp: 3, pattern: 'rook',   every: 2, aggro: 6 },
+  wisp:     { name: 'Wisp',        hp: 4, atk: 1, exp: 2, pattern: 'drift',  every: 1, aggro: 0 },
+  bat:      { name: 'Jungle Bat',  hp: 5, atk: 2, exp: 3, pattern: 'bat',    every: 1, aggro: 7, fly: true },
 };
 
 // ---------------- evolution tiers & major forms ----------------
@@ -63,6 +69,7 @@ export function makeEnemy(type, x, y) {
     type, name: t.name, x, y, px: x, py: y,
     maxHp: st.hp, hp: st.hp, atk: st.atk,
     exp: t.exp, pattern: t.pattern, every: t.every, aggro: t.aggro,
+    fly: !!t.fly || t.pattern === 'drift',
     tier, major, form: formOf(type, major), knight: knightOf(type, major),
     cd: 1, flash: 0, anim: null,
   };
@@ -76,6 +83,7 @@ export function simEnemy(type, tier, major) {
     type, name: t.name, x: 0, y: 0, px: 0, py: 0,
     maxHp: st.hp, hp: st.hp, atk: st.atk,
     exp: t.exp, pattern: t.pattern, every: t.every, aggro: t.aggro,
+    fly: !!t.fly || t.pattern === 'drift',
     tier, major, form: formOf(type, major), knight: knightOf(type, major),
     cd: 1, flash: 0, anim: null,
   };
@@ -127,7 +135,7 @@ export function occupied(x, y) {
 
 export function tileFreeFor(e, x, y) {
   if (!inGrid(x, y)) return false;
-  if (!W.walkable(x, y, e.pattern === 'drift')) return false;
+  if (!W.walkable(x, y, e.fly || e.pattern === 'drift')) return false;
   if (occupied(x, y)) return false;
   return true;
 }
@@ -141,7 +149,8 @@ function trySpawn(type, minD, maxD) {
     const y = Math.round(P.y + Math.sin(a) * d);
     if (cheb(x, y, P.x, P.y) < minD) continue;
     if (S.visible[idx(x, y)]) continue;          // only in the fog
-    if (!tileFreeFor({ pattern: 'king' }, x, y)) continue;
+    if (!tileFreeFor({ pattern: 'king', fly: false }, x, y)) continue;
+    if (type === 'bat' && !W.isJungleGrass(x, y)) continue;  // bats roost in the jungle
     S.enemies.push(makeEnemy(type, x, y));
     return true;
   }
@@ -154,25 +163,42 @@ export function spawnInitial(n) {
 }
 
 export function spawnTick() {
+  if (S.boss) return;                            // the forest holds its breath for the dragon
   const target = Math.min(2 + Math.floor(S.level * 0.8), 9);
   if (S.enemies.length >= target || S.turn % 2 === 1) return;
-  const pool = ['shambler', 'shambler'];
+  const P = S.player;
+  const inJungle = W.isJungleGrass(P.x, P.y);    // jungle beasts only wake on jungle grass
+  const pool = [];
+  if (inJungle) pool.push('bat', 'bat', 'bat');
+  pool.push('shambler', 'shambler');
   if (S.level >= 2) pool.push('stalker', 'wisp');
   if (S.level >= 3) pool.push('skitter', 'stalker');
   if (S.level >= 10) pool.push('stalker', 'skitter'); // majors enter the mix
-  trySpawn(pool[(Math.random() * pool.length) | 0], 5, 8);
+  // a few pool draws so a bat pick that finds no jungle tile falls through
+  for (let i = 0; i < 3; i++) {
+    const type = pool[(Math.random() * pool.length) | 0];
+    if (trySpawn(type, 5, 8)) return;
+  }
 }
 
-// ---------------- the AI (from scratch) ----------------
-// move offsets for one step of a pattern; knight jumps are extra offsets
+// move offsets for one step of a pattern; knight jumps are extra offsets.
+// The bat's shape is unique: 1-step orthogonal (its 3x3) + 2-step diagonals
+// (the corners of its 5x5) - nothing else moves like it.
 const K  = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 const D4 = [[1, 1], [1, -1], [-1, 1], [-1, -1]];
 const O4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const KN = [[2, 1], [2, -1], [-2, 1], [-2, -1], [1, 2], [-1, 2], [1, -2], [-1, -2]];
+const BAT = [...O4, [2, 2], [2, -2], [-2, 2], [-2, -2]];
 
 export function patternOffsets(e) {
-  const base = e.pattern === 'bishop' ? D4 : e.pattern === 'rook' ? O4 : K;
+  const base = e.pattern === 'bishop' ? D4 : e.pattern === 'rook' ? O4 : e.pattern === 'bat' ? BAT : K;
   return e.knight ? base.concat(KN) : base;
+}
+
+// the tiles a pattern can ATTACK from (the bat bites only at orthogonal range;
+// its long diagonal leaps are travel, not strikes)
+export function attackOffsets(e) {
+  return e.pattern === 'bat' ? O4 : patternOffsets(e);
 }
 
 // Pattern reader: watches the player's last moves (S.pmov) and predicts the
@@ -260,7 +286,7 @@ function greedyStep(e, walkFn, occFn, P, pred, wPred) {
 export function chooseEnemyMove(e, P, env) {
   const offs = patternOffsets(e);
   // 1) attack when the player stands on a reachable attack tile
-  if (offs.some(([ox, oy]) => P.x === e.x + ox && P.y === e.y + oy)) {
+  if (attackOffsets(e).some(([ox, oy]) => P.x === e.x + ox && P.y === e.y + oy)) {
     return { kind: 'attack' };
   }
   const d = cheb(e.x, e.y, P.x, P.y);
@@ -296,7 +322,11 @@ async function moveEnemy(e, nx, ny) {
 }
 
 export async function enemyTurnsAll() {
-  if (S.boss) await dragonTurn();
+  if (S.boss) {
+    // the dragon commands the field: every other enemy is frozen until it falls
+    await dragonTurn();
+    return;
+  }
   if (S.over) return;
   const P = S.player;
   for (const e of [...S.enemies]) {
@@ -305,7 +335,7 @@ export async function enemyTurnsAll() {
     if (--e.cd > 0) continue;
     e.cd = e.every;
     const env = {
-      walk: (x, y) => W.walkable(x, y, e.pattern === 'drift'),
+      walk: (x, y) => W.walkable(x, y, e.fly || e.pattern === 'drift'),
       occ: (x, y) => occupied(x, y),
       predict: () => predictPlayerTile(P),
     };
