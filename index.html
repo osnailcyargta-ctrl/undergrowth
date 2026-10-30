@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>UNDERGROWTH</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='3' y='3' width='10' height='10' fill='%2377875f' stroke='%232c3522'/%3E%3Crect x='4' y='4' width='4' height='2' fill='%23a5b47c'/%3E%3C/svg%3E">
+<meta name="description" content="A topdown forest roguelike rendered with raw WebGL2 shaders.">
+<link rel="stylesheet" href="css/ui.css">
+<script>
+  window.addEventListener('error', function (e) {
+    window.__ERR = (window.__ERR || '') + e.message + ' @ ' + (e.filename || '') + ':' + e.lineno + '\n';
+  });
+  window.addEventListener('unhandledrejection', function (e) {
+    window.__ERR = (window.__ERR || '') + 'REJECTION: ' + (e.reason && e.reason.message ? e.reason.message : e.reason) + '\n';
+  });
+</script>
+</head>
+<body>
+<div id="app">
+  <canvas id="gl"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" hidden>
+    <div class="panel" id="hud-left">
+      <div class="bar hp"><div class="fill" id="hpfill"></div><span id="hptext">20 / 20</span></div>
+      <div class="bar exp"><div class="fill" id="expfill"></div><span id="exptext">LV 1</span></div>
+      <div class="stats">
+        <span id="sight">SIGHT 4</span>
+        <span id="turn">TURN 1</span>
+        <span id="atk">ATK 3</span>
+      </div>
+    </div>
+    <div class="panel" id="hud-right">
+      <div id="zoominfo">ZOOM 4 / 4</div>
+      <div id="camhint">WHEEL zoom &middot; WASD pan</div>
+    </div>
+  </div>
+
+  <div id="hint" hidden>Click a tile beside you to move &mdash; click yourself to wait</div>
+
+  <div id="toasts"></div>
+
+  <div id="bossbar" hidden>
+    <div class="bossname">ANCIENT DRAGON</div>
+    <div class="bar boss"><div class="fill" id="bossfill"></div></div>
+  </div>
+
+  <div id="countdown" hidden>5</div>
+
+  <div id="arrow" hidden></div>
+  <div id="glint" hidden></div>
+
+  <!-- Evolution popup -->
+  <div id="evolve" hidden>
+    <div class="evolve-title">EVOLVE</div>
+    <div class="evolve-sub">choose one</div>
+    <div id="evolve-cards"></div>
+  </div>
+
+  <!-- Intro -->
+  <div id="intro">
+    <div class="intro-box">
+      <div class="game-title">UNDERGROWTH</div>
+      <div class="game-sub">You wake as a cube in a forest that does not end.</div>
+      <div class="game-help">
+        <div><b>MOVE</b> click a tile beside you</div>
+        <div><b>WAIT</b> click yourself</div>
+        <div><b>ZOOM</b> mouse wheel &mdash; needs an Eyes upgrade</div>
+        <div><b>PAN</b> WASD or arrow keys</div>
+      </div>
+      <button id="intro-start">WAKE</button>
+    </div>
+  </div>
+
+  <!-- Game over -->
+  <div id="gameover" hidden>
+    <div class="intro-box">
+      <div class="game-title red">THE FOREST TAKES YOU</div>
+      <div id="go-stats" class="game-sub"></div>
+      <button id="go-restart">TRY AGAIN</button>
+    </div>
+  </div>
+
+  <div id="err" hidden></div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
