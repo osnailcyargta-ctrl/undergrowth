@@ -1,7 +1,9 @@
 // UNDERGROWTH - live sprite factory.
 // The only baked assets are the 4 base player sprites. Every other visual
 // (tiles, enemies, the dragon, the altar, upgrade icons, attachment visuals
-// for procedural upgrades) is generated here, in code, at runtime.
+// and the parametric FORGED body parts) is generated here, in code, at runtime.
+
+import { genPartParams } from './genbody.js';
 
 // ---------------- tiny canvas helpers ----------------
 export function cv(w, h) {
@@ -322,8 +324,18 @@ function mirrored(x, fn) {
 
 // Code-drawn body-part replacements. When an upgrade carries a `sprite` key
 // the base part art is HIDDEN and one of these takes its place, so every
-// evolution visibly reshapes the creature.
+// evolution visibly reshapes the creature. Forged upgrades use seeded keys
+// ('G<seed>') and are drawn by the parametric forge renderer below.
 export function partOverride(x, part, kind, frame) {
+  if (kind && kind[0] === 'G') {
+    const p = genPartParams(part, parseInt(kind.slice(1), 10) || 1);
+    const f = frame ? 1 : 0;
+    if (part === 'legs') drawGenLegs(x, p, f);
+    else if (part === 'arms') drawGenArms(x, p, f);
+    else if (part === 'body') drawGenBody(x, p);
+    else if (part === 'eyes') drawGenEyes(x, p);
+    return;
+  }
   const f = frame ? 1 : 0;
   if (part === 'legs') {
     if (kind === 'stride') {
@@ -417,9 +429,148 @@ export function partOverride(x, part, kind, frame) {
   }
 }
 
+// ---------------- forged (parametric) body parts ----------------
+// Every forged upgrade redraws its body part from seed - five shapes per
+// part, tinted by the theme palette that also named the upgrade.
+
+function footTip(x, tx, ty, kind) {
+  if (kind === 'claw') { R(x, tx - 1, ty - 1, 1, 1, '#e8e0c0'); R(x, tx, ty, 1, 1, '#c9b88a'); }
+  else R(x, tx - 1, ty, 2, 1, '#2c2416');
+}
+
+function drawGenLegs(x, p, f) {
+  const c = p.color, c2 = p.color2;
+  if (p.form === 0) {          // stilts
+    mirrored(x, () => {
+      line(x, 6, 10, 5, 13, c);
+      line(x, 5, 13, 5 - f, 15, c2);
+      footTip(x, 5 - f, 15, p.tip);
+    });
+  } else if (p.form === 1) {   // arched, digitigrade
+    mirrored(x, () => {
+      line(x, 6, 10, 4, 11 + f, c);
+      line(x, 4, 11 + f, 6, 14, c2);
+      line(x, 6, 14, 6 + f, 15, c);
+      footTip(x, 6 + f, 15, p.tip);
+    });
+  } else if (p.form === 2) {   // cluster of limbs
+    mirrored(x, () => {
+      for (let i = 0; i < p.count; i++) {
+        const ey = 9 + i * 2;
+        line(x, 6, 10 + i, 2, ey + f * (i % 2), i % 2 ? c2 : c);
+        R(x, 2, ey + f * (i % 2), 1, 1, c);
+      }
+    });
+  } else if (p.form === 3) {   // coiled springs
+    mirrored(x, () => {
+      line(x, 6, 10, 4, 11, c); line(x, 4, 11, 6, 12, c2);
+      line(x, 6, 12, 4, 13 + f, c); line(x, 4, 13 + f, 5, 15, c2);
+      R(x, 5, 15, 2, 1, c);
+    });
+  } else {                     // blades
+    mirrored(x, () => {
+      line(x, 6, 9, 4, 15, c);
+      line(x, 7, 9, 5, 15, c2);
+      R(x, 4, 15, 1, 1, '#e8f0d8');
+    });
+  }
+}
+
+function drawGenArms(x, p, f) {
+  const c = p.color, c2 = p.color2;
+  if (p.form === 0) {          // curved claws
+    mirrored(x, () => {
+      line(x, 3, 8 + f, 1, 6, c);
+      line(x, 1, 6, 0, 3, c2);
+      R(x, 0, 3, 1, 1, '#f2d9a8');
+    });
+  } else if (p.form === 1) {   // long blades
+    mirrored(x, () => {
+      line(x, 3, 9, 0, 6 - f, c);
+      line(x, 3, 10, 0, 8 - f, c2);
+      R(x, 0, 5 - f, 1, 1, '#f2f2d8');
+    });
+  } else if (p.form === 2) {   // heavy fists
+    mirrored(x, () => {
+      R(x, 2, 8 + f, 1, 2, c2);
+      R(x, 1, 9 + f, 3, 3, c);
+      R(x, 1, 9 + f, 3, 1, shade(p.color, 0.3));
+      R(x, 1, 12 + f > 15 ? 15 : 12 + f, 1, 1, c2);
+    });
+  } else if (p.form === 3) {   // whips
+    mirrored(x, () => {
+      line(x, 3, 8, 1, 7 + f, c);
+      line(x, 1, 7 + f, 2, 5 + f, c2);
+      line(x, 2, 5 + f, 0, 3, c);
+      R(x, 0, 3, 1, 1, '#f2e8c0');
+    });
+  } else {                     // pincers
+    mirrored(x, () => {
+      R(x, 2, 8 + f, 2, 1, c2);
+      line(x, 3, 8 + f, 0, 5, c);
+      line(x, 3, 9 + f, 0, 11, c);
+      R(x, 0, 5, 1, 1, '#f2d9a8'); R(x, 0, 11, 1, 1, '#f2d9a8');
+    });
+  }
+}
+
+function drawGenBody(x, p) {
+  const c = p.color, c2 = p.color2;
+  R(x, 4, 4, 8, 9, c);
+  if (p.form === 0) {          // plated hide
+    R(x, 4, 7, 8, 1, c2); R(x, 4, 10, 8, 1, c2);
+    R(x, 5, 5, 1, 1, shade(p.color, 0.35)); R(x, 10, 5, 1, 1, shade(p.color, 0.35));
+    R(x, 7, 8, 2, 1, shade(p.color, -0.35));
+  } else if (p.form === 1) {   // bark skin
+    R(x, 6, 4, 1, 9, c2); R(x, 9, 4, 1, 9, c2); R(x, 4, 4, 8, 1, '#6d8a4a');
+    R(x, 5, 6, 1, 2, shade(p.color, -0.3)); R(x, 10, 9, 1, 2, shade(p.color, -0.3));
+  } else if (p.form === 2) {   // spiked back
+    for (let i = 0; i < p.spikes; i++) {
+      const sx = 4 + i * Math.floor(9 / p.spikes);
+      R(x, Math.min(11, sx), 2 + (i % 2), 1, 3, i % 2 ? c2 : c);
+    }
+    R(x, 4, 5, 8, 1, c2);
+  } else if (p.form === 3) {   // gem core
+    R(x, 7, 8, 2, 2, p.iris);
+    R(x, 7, 7, 2, 1, c2); R(x, 6, 8, 1, 2, c2); R(x, 9, 8, 1, 2, c2); R(x, 7, 10, 2, 1, c2);
+    R(x, 7, 8, 1, 1, shade(p.color, 0.5));
+  } else {                     // frond shoulders
+    disc(x, 4.5, 5, 1.5, c2); disc(x, 11.5, 5, 1.5, c2);
+    R(x, 4, 4, 8, 1, shade(p.color, 0.3));
+    R(x, 7, 9, 2, 2, shade(p.color, -0.3));
+  }
+}
+
+function drawGenEyes(x, p) {
+  const iris = p.iris, ink = '#1c2418';
+  if (p.form === 0) {          // wide
+    R(x, 5, 6, 2, 2, iris); R(x, 9, 6, 2, 2, iris);
+    R(x, 6, 7, 1, 1, ink); R(x, 9, 7, 1, 1, ink);
+    R(x, 5, 6, 1, 1, '#fff8d8'); R(x, 10, 6, 1, 1, '#fff8d8');
+  } else if (p.form === 1) {   // slit pupils
+    R(x, 5, 6, 2, 2, iris); R(x, 9, 6, 2, 2, iris);
+    R(x, 6, 6, 1, 2, ink); R(x, 9, 6, 1, 2, ink);
+  } else if (p.form === 2) {   // third eye
+    R(x, 5, 7, 2, 1, iris); R(x, 9, 7, 2, 1, iris);
+    R(x, 6, 7, 1, 1, ink); R(x, 9, 7, 1, 1, ink);
+    R(x, 7, 4, 2, 1, iris); R(x, 8, 4, 1, 1, ink);
+  } else if (p.form === 3) {   // halo
+    x.globalAlpha = 0.35;
+    disc(x, 6, 7, 2.4, iris); disc(x, 10, 7, 2.4, iris);
+    x.globalAlpha = 1;
+    R(x, 5, 7, 2, 1, '#fff8d8'); R(x, 9, 7, 2, 1, '#fff8d8');
+    R(x, 6, 7, 1, 1, iris); R(x, 9, 7, 1, 1, iris);
+  } else {                     // compound
+    for (const [dx, dy] of [[-1, 0], [0, -1], [0, 1]]) {
+      R(x, 6 + dx, 7 + dy, 1, 1, iris);
+      R(x, 9 - dx, 7 + dy, 1, 1, iris);
+    }
+  }
+}
+
 export function playerCanvas(P, imgs, frame) {
   const c = cv(16, 16), x = ctx2(c);
-  const back = ['wings', 'tail', 'cloak'];
+  const back = ['wings', 'tail', 'cloak', 'spines'];
   for (const att of P.attachments) if (back.includes(att.kind)) drawAtt(x, att, frame);
   const ov = P.overrides || {};
   const bob = frame === 1 ? -1 : 0;
@@ -499,6 +650,19 @@ function drawAtt(x, att, frame) {
       R(x, 7, 7, 2, 2, col);
       R(x, 7, 6, 1, 1, shade(col, -0.3)); R(x, 8, 9, 1, 1, shade(col, -0.3));
       break;
+    case 'spines':
+      R(x, 4, 3, 1, 3, col); R(x, 7, 2, 1, 4, col); R(x, 10, 3, 1, 3, col);
+      R(x, 4, 3, 1, 1, shade(col, 0.35)); R(x, 7, 2, 1, 1, shade(col, 0.35)); R(x, 10, 3, 1, 1, shade(col, 0.35));
+      break;
+    case 'orb': {
+      const oy = frame ? 0 : 1;
+      x.globalAlpha = 0.35;
+      disc(x, 8, 2 + oy, 2.6, col);
+      x.globalAlpha = 1;
+      disc(x, 8, 2 + oy, 1.4, col);
+      R(x, 7, 1 + oy, 1, 1, '#ffffff');
+      break;
+    }
     case 'glow':
       x.globalAlpha = 0.7;
       R(x, 3, 5, 1, 1, col); R(x, 12, 5, 1, 1, col); R(x, 8, 3, 1, 1, col);
@@ -627,6 +791,17 @@ export function iconCanvas(def) {
       R(x, 4, 10, 2, 3, col); R(x, 10, 10, 2, 3, col);
       R(x, 3, 6, 2, 5, shade(col, 0.25)); R(x, 11, 6, 2, 5, shade(col, 0.25));
       R(x, 3, 5, 1, 2, col); R(x, 12, 5, 1, 2, col);
+      break;
+    case 'new-spines':
+      R(x, 2, 11, 12, 2, col);
+      R(x, 3, 8, 2, 3, col); R(x, 7, 6, 2, 5, col); R(x, 11, 8, 2, 3, col);
+      R(x, 7, 6, 1, 1, shade(col, 0.35)); R(x, 3, 8, 1, 1, shade(col, 0.35)); R(x, 11, 8, 1, 1, shade(col, 0.35));
+      break;
+    case 'new-orb':
+      x.globalAlpha = 0.4; disc(x, 8, 7, 4.5, col); x.globalAlpha = 1;
+      disc(x, 8, 7, 2.6, col);
+      R(x, 7, 6, 1, 1, '#ffffff');
+      R(x, 3, 11, 2, 1, col); R(x, 11, 11, 2, 1, col);
       break;
     default: heart(4, 5);
   }

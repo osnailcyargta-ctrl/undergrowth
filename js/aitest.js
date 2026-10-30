@@ -1,19 +1,35 @@
-// UNDERGROWTH - the AI Lab. Press CTRL+ALT+M on the main menu.
-// A sandbox that runs the game's OWN enemy AI - the exact same hand-written
-// functions that hunt you in a run (chooseEnemyMove / predictPlayerTile /
-// bfsStep, all written from scratch for this game). Nothing here calls any
-// external AI: it is pure local simulation for testing and tinkering.
+// UNDERGROWTH - the hidden dev bench. Opens from the main menu only, and it
+// is deliberately not documented in the README or anywhere a player looks.
+//
+// Two benches, both driven 100% locally by this game's own hand-written
+// code - no external AI, no network calls, nothing copied:
+//
+//   UPGRADE FORGE  - watches the from-scratch forge (js/genbody.js) build
+//                    infinite upgrades: name, stat description, level
+//                    scaling, and the visual instruction. It shows what
+//                    changes when the upgrade is equipped and previews the
+//                    actual sprite on the player body, before and after.
+//   HUNTER BRAIN   - the real enemy AI in a sandbox: chase scoring, BFS
+//                    pathfinding and the movement-pattern reader.
 
 import { S } from './state.js';
-import { chooseEnemyMove, predictPlayerTile, simEnemy, TYPES, tierFor } from './enemies.js';
-import { enemyCanvas } from './spritegen.js';
+import { forgeOne, describeStats, tierOf } from './genbody.js';
+import { iconCanvas, playerCanvas, enemyCanvas } from './spritegen.js';
+import { chooseEnemyMove, predictPlayerTile, simEnemy, TYPES } from './enemies.js';
 import * as UI from './ui.js';
 
-const N = 17;            // sandbox grid (N x N)
+const N = 17;            // hunter sandbox grid (N x N)
 const CENTER = 8;        // player start
 const CELL = 14;         // canvas px per cell
 
 let open = false, built = false;
+let tab = 'forge';
+
+// ---------------- forge bench state ----------------
+const imgs = {};
+let forgeCount = 0;
+
+// ---------------- hunter bench state ----------------
 let grid = null;         // 0 = grass, 1 = tree, 2 = rock
 let simP = null;         // { x, y } - the scripted player
 let enemy = null;        // simEnemy instance
@@ -33,16 +49,43 @@ const PATTERNS = [
 
 function $(id) { return document.getElementById(id); }
 
+// base player sprites for the equip preview (loaded once, non-fatal on miss)
+function loadBase() {
+  return Promise.all(['head', 'body', 'legs', 'arms'].map((n) => new Promise((res) => {
+    const i = new Image();
+    i.onload = () => { imgs[n] = i; res(); };
+    i.onerror = () => res();
+    i.src = `assets/${n}.png`;
+  })));
+}
+
+// ================================================================== build
 function build() {
   built = true;
+  loadBase();
+
+  // tabs
+  $('ai-tab-forge').addEventListener('click', () => setTab('forge'));
+  $('ai-tab-hunter').addEventListener('click', () => setTab('hunter'));
+  $('ai-close').addEventListener('click', hide);
+
+  // forge controls
+  $('fg-level').innerHTML = Array.from({ length: 30 }, (_, i) =>
+    `<option value="${i + 1}" ${i === 0 ? 'selected' : ''}>LV ${i + 1}</option>`).join('');
+  $('fg-one').addEventListener('click', () => forge(+$('fg-level').value));
+  $('fg-batch').addEventListener('click', () => {
+    const lv = +$('fg-level').value;
+    for (let i = 0; i < 8; i++) forge(lv, i === 7);
+  });
+  $('fg-clear').addEventListener('click', () => { $('fg-log').innerHTML = ''; });
+
+  // hunter controls
   const typeSel = $('ai-type');
   typeSel.innerHTML = Object.keys(TYPES)
     .map((t) => `<option value="${t}">${TYPES[t].name}</option>`).join('');
   $('ai-tier').innerHTML = [0, 1, 2, 3, 4].map((t) => `<option value="${t}">Tier ${t}</option>`).join('');
   $('ai-major').innerHTML = [0, 1, 2].map((m) => `<option value="${m}">Major ${m}</option>`).join('');
   $('ai-pat').innerHTML = PATTERNS.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
-
-  $('ai-close').addEventListener('click', hide);
   $('ai-reset').addEventListener('click', reset);
   $('ai-step').addEventListener('click', () => doStep());
   $('ai-run').addEventListener('click', run20);
@@ -51,9 +94,112 @@ function build() {
     $(id).addEventListener('change', reset);
   }
   reset();
+  // the equip preview needs the 4 base sprites - forge once they are in
+  loadBase().then(() => forge(+$('fg-level').value));
 }
 
-// ---------------- sandbox world ----------------
+function setTab(t) {
+  tab = t;
+  $('tab-forge').hidden = t !== 'forge';
+  $('tab-hunter').hidden = t !== 'hunter';
+  $('ai-tab-forge').classList.toggle('on', t === 'forge');
+  $('ai-tab-hunter').classList.toggle('on', t === 'hunter');
+}
+
+// ========================================================== UPGRADE FORGE
+// A pure preview: clone the player, apply the forged upgrade the same way
+// upgrades.applyUpgrade does in the real game, and render both bodies.
+function previewApply(P, def) {
+  const Q = {
+    ...P,
+    parts: { ...P.parts },
+    overrides: { ...P.overrides },
+    attachments: [...P.attachments],
+    irisColor: P.irisColor,
+  };
+  if (def.part && def.part !== 'new') {
+    Q.parts[def.part]++;
+    Q.overrides[def.part] = def.sprite;    // base art hidden, forged art drawn
+    if (def.part === 'eyes') Q.canZoom = true;
+  }
+  if (def.part === 'new') Q.hasNewBody = true;
+  if (def.att) {
+    if (def.att.kind === 'iris') Q.irisColor = def.att.color;
+    else {
+      Q.attachments.push(def.att);
+      if (Q.attachments.length > 8) Q.attachments.shift();
+    }
+  }
+  Q.head = 1;
+  return Q;
+}
+
+function drawInto(canvas, sprite) {
+  const x = canvas.getContext('2d');
+  x.imageSmoothingEnabled = false;
+  x.clearRect(0, 0, canvas.width, canvas.height);
+  x.drawImage(sprite, 0, 0);
+}
+
+function forge(level, quiet) {
+  const def = forgeOne(level);
+  forgeCount++;
+
+  // card
+  const kind = $('fg-kind');
+  kind.textContent = def.header;
+  const iconBox = $('fg-icon');
+  iconBox.innerHTML = '';
+  iconBox.appendChild(iconCanvas(def));
+  $('fg-name').textContent = def.name;
+  $('fg-desc').innerHTML = '';
+  for (const line of def.desc) {
+    const d = document.createElement('div');
+    d.textContent = line;
+    $('fg-desc').appendChild(d);
+  }
+  $('fg-meta').textContent = `LV ${def.level}  ·  ${def.rarity.toUpperCase()}  ·  TIER ${tierOf(level)}  ·  #${def.id}`;
+
+  // equip preview: current body vs forged body (needs the base sprites)
+  if (S.player && imgs.body) {
+    drawInto($('fg-before'), playerCanvas(S.player, imgs, 0));
+    drawInto($('fg-after'), playerCanvas(previewApply(S.player, def), imgs, 0));
+  }
+
+  // what changes when equipped
+  const ch = $('fg-changes');
+  ch.innerHTML = '';
+  const row = (label, txt) => {
+    const d = document.createElement('div');
+    d.className = 'fg-change';
+    d.innerHTML = `<b>${label}</b> ${txt}`;
+    ch.appendChild(d);
+  };
+  if (def.part && def.part !== 'new') {
+    row('SPRITE', `${def.part} art hidden and replaced with code-drawn ${def.formLabel} (palette: ${def.gen.theme})`);
+  } else {
+    row('SPRITE', `a new body part grows: ${def.att.kind} (drawn in code)`);
+  }
+  if (def.att && def.att.kind === 'iris') row('EYES', `iris recolored to ${def.att.color}`);
+  else if (def.att && def.part !== 'new') row('ATTACHMENT', `${def.att.kind} drawn onto the body`);
+  for (const line of describeStats(def.tags)) row('STAT', line);
+  if (!describeStats(def.tags).length) row('STAT', 'no raw stats');
+
+  if (!quiet) {
+    flog(`#${def.id}  ${def.name}  -  ${def.part}  -  LV${level}  -  ${def.rarity}  -  ${def.formLabel}`);
+  }
+}
+
+function flog(txt) {
+  const box = $('fg-log');
+  const d = document.createElement('div');
+  d.textContent = txt;
+  box.appendChild(d);
+  while (box.children.length > 12) box.removeChild(box.firstChild);
+  box.scrollTop = box.scrollHeight;
+}
+
+// ============================================================ HUNTER BRAIN
 function reset() {
   if (!built) return;
   const rnd = mulberry((S.seed ^ 0x51ab3f) + Date.now() % 100000);
@@ -284,6 +430,7 @@ function show() {
   if (!built) build();
   open = true;
   el.popup.hidden = false;
+  setTab('forge');
   reset();
 }
 function hide() {
@@ -297,9 +444,10 @@ export function initAITest() {
   el.log = $('ai-log');
   el.status = $('ai-status');
   window.addEventListener('keydown', (e) => {
+    if (e.repeat) return;
     if (e.ctrlKey && e.altKey && (e.key === 'm' || e.key === 'M')) {
       e.preventDefault();
-      if (S.started) { UI.toast('The AI Lab is only available on the main menu.'); return; }
+      if (S.started) { UI.toast('This bench only opens from the main menu.'); return; }
       open ? hide() : show();
     }
     if (open && e.key === 'Escape') hide();

@@ -69,7 +69,6 @@
         <div><b>ZOOM</b> mouse wheel or pinch &mdash; needs an Eyes upgrade</div>
         <div><b>CAMERA</b> locked at full view, follows you when zoomed in</div>
         <div><b>TOUCH</b> tap a tile to move &middot; pinch to zoom</div>
-        <div><b>AI LAB</b> press CTRL+ALT+M here on the menu</div>
       </div>
       <button id="intro-start">WAKE</button>
     </div>
@@ -84,27 +83,65 @@
     </div>
   </div>
 
-  <!-- AI Lab (Ctrl+Alt+M on the main menu) -->
+  <!-- hidden dev bench (intentionally undocumented) -->
   <div id="aitest" hidden>
     <div class="aitest-box">
-      <div class="aitest-title">AI LAB</div>
-      <div class="aitest-sub">the game's own from-scratch enemy AI - hand-written chase, pathfinding and pattern reading. no external AI.</div>
-      <div id="ai-status">&nbsp;</div>
-      <div class="aitest-row">
-        <label>ENEMY <select id="ai-type"></select></label>
-        <label>TIER <select id="ai-tier"></select></label>
-        <label>MAJOR <select id="ai-major"></select></label>
-        <label>PLAYER <select id="ai-pat"></select></label>
-      </div>
-      <canvas id="ai-canvas" width="238" height="238"></canvas>
-      <div class="aitest-row">
-        <button id="ai-step">STEP</button>
-        <button id="ai-run">RUN 20</button>
-        <button id="ai-bench">BENCH</button>
-        <button id="ai-reset">RESET</button>
+      <div class="aitest-head">
+        <div>
+          <div class="aitest-title">AI LAB</div>
+          <div class="aitest-sub">dev bench - every system here is written from scratch and runs 100% locally. no external AI.</div>
+        </div>
         <button id="ai-close">CLOSE</button>
       </div>
-      <div id="ai-log"></div>
+      <div class="aitest-tabs">
+        <button id="ai-tab-forge" class="on">UPGRADE FORGE</button>
+        <button id="ai-tab-hunter">HUNTER BRAIN</button>
+      </div>
+
+      <div id="tab-forge">
+        <div class="aitest-row">
+          <label>LEVEL <select id="fg-level"></select></label>
+          <button id="fg-one">FORGE ONE</button>
+          <button id="fg-batch">FORGE x8</button>
+          <button id="fg-clear">CLEAR LOG</button>
+        </div>
+        <div class="forge-grid">
+          <div class="fg-cardbox">
+            <div class="fg-kind" id="fg-kind">&nbsp;</div>
+            <div class="fg-icon" id="fg-icon"></div>
+            <div class="fg-name" id="fg-name">&nbsp;</div>
+            <div class="fg-desc" id="fg-desc"></div>
+            <div class="fg-meta" id="fg-meta">&nbsp;</div>
+          </div>
+          <div class="fg-equip">
+            <div class="fg-sprites">
+              <div class="fg-sprite"><canvas id="fg-before" width="16" height="16"></canvas><span>CURRENT</span></div>
+              <div class="fg-arrow">&rarr;</div>
+              <div class="fg-sprite"><canvas id="fg-after" width="16" height="16"></canvas><span>FORGED</span></div>
+            </div>
+            <div id="fg-changes"></div>
+          </div>
+        </div>
+        <div id="fg-log"></div>
+      </div>
+
+      <div id="tab-hunter" hidden>
+        <div id="ai-status">&nbsp;</div>
+        <div class="aitest-row">
+          <label>ENEMY <select id="ai-type"></select></label>
+          <label>TIER <select id="ai-tier"></select></label>
+          <label>MAJOR <select id="ai-major"></select></label>
+          <label>PLAYER <select id="ai-pat"></select></label>
+        </div>
+        <canvas id="ai-canvas" width="238" height="238"></canvas>
+        <div class="aitest-row">
+          <button id="ai-step">STEP</button>
+          <button id="ai-run">RUN 20</button>
+          <button id="ai-bench">BENCH</button>
+          <button id="ai-reset">RESET</button>
+        </div>
+        <div id="ai-log"></div>
+      </div>
     </div>
   </div>
 

@@ -37,11 +37,17 @@ as-is (no build step).
   level, sight only grows with Eyes upgrades.
 - Kills drop EXP motes. Leveling up fully heals you and opens a roguelike
   evolution popup: 3 cards, body upgrades and unique upgrades.
-- Body upgrades visually change your sprite. The cube grows a head, limbs,
-  wings, tails, horns — all drawn live in code.
+- Every body upgrade visibly reshapes your sprite - the replaced part is
+  drawn live in code (wings, tails, horns, plated hides, blade legs...).
+- The forest fights back: every 3 level ups enemies evolve (tougher, and
+  smarter - pattern reading, then BFS pathfinding, then interception);
+  every 10 level ups they take a major form (the winged stalker learns
+  knight jumps, the skitter hardens into a rook tower).
 - One altar spawns per map. Stepping onto it **deliberately** triggers a
   5-second countdown, then the Ancient Dragon wakes: 2x2 body, queen
-  movement, 8-block reach. Kill it for a big reward; a new altar rises.
+  movement, 8-block reach, and it PHASES through trees and rocks - only
+  the edge of the world and living bodies can stop it. Kill it for a big
+  reward; a new altar rises.
 
 ## Tech
 
@@ -77,9 +83,9 @@ undergrowth/
     enemies.js          4 enemy types with unique movement patterns
     boss.js             the Ancient Dragon (2x2, queen moves, breath)
     turn.js             turn resolution + legal move targets
-    upgrades.js         12 hardcoded body + 10 unique upgrades
-    genbody.js          procedural infinite upgrade generator
-    input.js            mouse / wheel / keys
+    upgrades.js         12 handcrafted body + 10 unique upgrades
+    genbody.js          the Forge: infinite upgrade generator (from scratch)
+    input.js            mouse / wheel / keys / touch
     ui.js               HUD, toasts, evolution cards, overlays
     main.js             boot, loop, render pipeline
 ```
@@ -98,16 +104,20 @@ undergrowth/
   arrow shows where you are when off-screen.
 - **Evolution popup**: 3 cards per level, at least one body upgrade and one
   unique upgrade when available; unique card header reads "unique upgrade".
-- **Procedural upgrades**: 2 fresh rule-based candidates per level-up, part
-  chosen randomly, names generated from tiered adjective/noun banks, stats
-  scale with level, each carries a visual instruction (attachment + color)
-  that is drawn onto the player sprite immediately. "New body" upgrades
-  (wings, tail, cloak, horns) add a brand-new body part.
+- **Forged upgrades (infinite)**: every evolution also rolls fresh upgrades
+  from a from-scratch generative engine (`js/genbody.js`). It knows the body
+  part it is reshaping, picks level-scaled effects that fit it, composes a
+  name from banks matched to the primary effect and the evolution tier, and
+  ties the name to a forest color theme. The theme palette then drives the
+  visual: the body part's base art is hidden and a seeded, code-drawn shape
+  (one of five forms per part) is drawn in its place, plus an optional
+  attachment. Descriptions list stats only. Names never repeat within a run.
 - **Pushback**: stepping onto the altar moves you onto it for one beat,
   then back to your previous tile — the ritual cannot be triggered by
   accident, and you never end your turn on the altar.
 - **Dragon**: spawns next to the altar after the 5-second countdown, moves
-  every turn (queen pattern, max 8, blocked by trees/rocks), breathes on
+  every turn (queen pattern, max 8) and phases through trees, rocks and
+  walls - only the world edge and living bodies block it. It breathes on
   contact for heavy damage. Killing it expands the world and relocates the
   altar, so the loop can repeat forever.
 - **Enemies**: Shambler (king), Stalker (bishop), Skitter (rook, acts every

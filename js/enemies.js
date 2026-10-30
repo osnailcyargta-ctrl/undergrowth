@@ -68,7 +68,7 @@ export function makeEnemy(type, x, y) {
   };
 }
 
-// sandbox clone used by the AI Lab (Ctrl+Alt+M): same stats, no game state
+// sandbox clone used by the hidden dev bench: same stats, no game state
 export function simEnemy(type, tier, major) {
   const t = TYPES[type];
   const st = statBlock(type, tier, major, 0);
